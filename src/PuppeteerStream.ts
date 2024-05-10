@@ -45,14 +45,7 @@ export const wss = (async () => {
   }
 })()
 
-export async function launch(
-  arg1: StreamLaunchOptions | { launch?: Function; [key: string]: any },
-  opts?: StreamLaunchOptions,
-): Promise<Browser> {
-  //if puppeteer library is not passed as first argument, then first argument is options
-  // @ts-ignore
-  if (typeof arg1.launch != 'function') opts = arg1
-
+export async function launch(opts: StreamLaunchOptions): Promise<Browser> {
   if (!opts) opts = {}
   if (!opts.args) opts.args = []
 
@@ -95,15 +88,7 @@ export async function launch(
     if (!opts.args.includes('--headless=new')) opts.args.push('--headless=new')
   }
 
-  let browser: Browser
-
-  // @ts-ignore
-  if (typeof arg1.launch == 'function') {
-    // @ts-ignore
-    browser = await arg1.launch(opts)
-  } else {
-    browser = await puppeteerLaunch(opts)
-  }
+  let browser = await puppeteerLaunch(opts)
 
   if (opts.allowIncognito) {
     const settings = await browser.newPage()
