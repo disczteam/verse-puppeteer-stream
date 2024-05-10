@@ -52,10 +52,10 @@ async function START_RECORDING({
     video: video && {
       ...video,
       mandatory: {
-        minWidth: 600,
-        maxWidth: 600,
-        minHeight: 1067,
-        maxHeight: 1067,
+        minWidth: 532,
+        maxWidth: 532,
+        minHeight: 945 + 90,
+        maxHeight: 945 + 90,
         chromeMediaSource: 'tab',
         chromeMediaSourceId: streamId,
       },
