@@ -1,116 +1,124 @@
-const recorders = {};
+const recorders = {}
 
 async function START_RECORDING({
-	index,
-	video,
-	audio,
-	frameSize,
-	audioBitsPerSecond,
-	videoBitsPerSecond,
-	bitsPerSecond,
-	mimeType,
-	videoConstraints,
-	delay,
-	audioConstraints,
-	tabId,
+  index,
+  video,
+  audio,
+  frameSize,
+  audioBitsPerSecond,
+  videoBitsPerSecond,
+  bitsPerSecond,
+  mimeType,
+  videoConstraints,
+  delay,
+  audioConstraints,
+  tabId,
 }) {
-	console.log(
-		"[PUPPETEER_STREAM] START_RECORDING",
-		JSON.stringify({
-			index,
-			video,
-			audio,
-			frameSize,
-			audioBitsPerSecond,
-			videoBitsPerSecond,
-			bitsPerSecond,
-			mimeType,
-			videoConstraints,
-			audioConstraints,
-			tabId,
-		})
-	);
+  console.log(
+    '[PUPPETEER_STREAM] START_RECORDING',
+    JSON.stringify({
+      index,
+      video,
+      audio,
+      frameSize,
+      audioBitsPerSecond,
+      videoBitsPerSecond,
+      bitsPerSecond,
+      mimeType,
+      videoConstraints,
+      audioConstraints,
+      tabId,
+    }),
+  )
 
-	const client = new WebSocket(`ws://localhost:${window.location.hash.substring(1)}/?index=${index}`, []);
+  const client = new WebSocket(
+    `ws://localhost:${window.location.hash.substring(1)}/?index=${index}`,
+    [],
+  )
 
-	await new Promise((resolve) => {
-		if (client.readyState === WebSocket.OPEN) resolve();
-		client.addEventListener("open", resolve);
-	});
+  await new Promise((resolve) => {
+    if (client.readyState === WebSocket.OPEN) resolve()
+    client.addEventListener('open', resolve)
+  })
 
-	const streamId = await new Promise((resolve, reject) => {
-		chrome.tabCapture.getMediaStreamId({ targetTabId: tabId }, (stream) => {
-			if (stream) resolve(stream);
-			else reject();
-		});
-	});
+  const streamId = await new Promise((resolve, reject) => {
+    chrome.tabCapture.getMediaStreamId({ targetTabId: tabId }, (stream) => {
+      if (stream) resolve(stream)
+      else reject()
+    })
+  })
 
-	const stream = await navigator.mediaDevices.getUserMedia({
-		video: video && {
-			...video,
-			mandatory: {
-				...video?.mandatory,
-				chromeMediaSource: "tab",
-				chromeMediaSourceId: streamId,
-			},
-		},
-		audio: audio && {
-			...audio,
-			mandatory: {
-				...audio?.mandatory,
-				chromeMediaSource: "tab",
-				chromeMediaSourceId: streamId,
-			},
-		},
-	});
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: video && {
+      ...video,
+      mandatory: {
+        minWidth: 600,
+        maxWidth: 600,
+        minHeight: 1067,
+        maxHeight: 1067,
+        chromeMediaSource: 'tab',
+        chromeMediaSourceId: streamId,
+      },
+    },
+    audio: audio && {
+      ...audio,
+      mandatory: {
+        ...audio?.mandatory,
+        chromeMediaSource: 'tab',
+        chromeMediaSourceId: streamId,
+      },
+    },
+  })
+  const videoTrack = stream.getVideoTracks()[0]
+  console.log('video track settings:', videoTrack.getSettings())
 
-	// somtimes needed to sync audio and video
-	if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+  // somtimes needed to sync audio and video
+  if (delay) await new Promise((resolve) => setTimeout(resolve, delay))
 
-	const recorder = new MediaRecorder(stream, {
-		ignoreMutedMedia: true,
-		audioBitsPerSecond,
-		videoBitsPerSecond,
-		bitsPerSecond,
-		mimeType,
-	});
+  const recorder = new MediaRecorder(stream, {
+    ignoreMutedMedia: true,
+    audioBitsPerSecond,
+    videoBitsPerSecond,
+    bitsPerSecond,
+    mimeType,
+  })
 
-	recorder.ondataavailable = async (e) => {
-		if (!e.data.size) return;
+  recorder.ondataavailable = async (e) => {
+    if (!e.data.size) return
 
-		const buffer = await e.data.arrayBuffer();
+    const buffer = await e.data.arrayBuffer()
 
-		client.send(buffer);
-	};
-	recorders[index] = recorder;
-	// TODO: recorder onerror
+    client.send(buffer)
+  }
+  recorders[index] = recorder
+  // TODO: recorder onerror
 
-	recorder.onerror = () => recorder.stop();
+  recorder.onerror = () => recorder.stop()
 
-	recorder.onstop = function () {
-		try {
-			const tracks = stream.getTracks();
+  recorder.onstop = function () {
+    try {
+      const tracks = stream.getTracks()
 
-			tracks.forEach(function (track) {
-				track.stop();
-			});
+      tracks.forEach(function (track) {
+        track.stop()
+      })
 
-			if (client.readyState === WebSocket.OPEN) client.close();
-		} catch (error) {}
-	};
-	stream.oninactive = () => {
-		try {
-			recorder.stop();
-		} catch (error) {}
-	};
+      if (client.readyState === WebSocket.OPEN) client.close()
+    } catch (error) {}
+  }
+  stream.oninactive = () => {
+    try {
+      recorder.stop()
+    } catch (error) {}
+  }
 
-	recorder.start(frameSize);
+  recorder.start(frameSize)
 }
 
 function STOP_RECORDING(index) {
-	console.log("[PUPPETEER_STREAM] STOP_RECORDING", index);
-	if (!recorders[index]) return;
-	if (recorders[index].state === "inactive") return;
+  console.log('[PUPPETEER_STREAM] STOP_RECORDING', index)
+  if (!recorders[index]) return
+  if (recorders[index].state === 'inactive') return
 
-	recorders[index].stop();
+  recorders[index].stop()
 }
