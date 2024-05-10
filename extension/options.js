@@ -1,5 +1,9 @@
 const recorders = {}
 
+const VERSE_WIDTH = 532
+const VIEWPORT_PADDING = 45
+const VIEWPORT_HEIGHT = 945 + 2 * VIEWPORT_PADDING
+
 async function START_RECORDING({
   index,
   video,
@@ -52,10 +56,10 @@ async function START_RECORDING({
     video: video && {
       ...video,
       mandatory: {
-        minWidth: 532,
-        maxWidth: 532,
-        minHeight: 945 + 90,
-        maxHeight: 945 + 90,
+        minWidth: VERSE_WIDTH,
+        maxWidth: VERSE_WIDTH,
+        minHeight: VIEWPORT_HEIGHT,
+        maxHeight: VIEWPORT_HEIGHT,
         chromeMediaSource: 'tab',
         chromeMediaSourceId: streamId,
       },
